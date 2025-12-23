@@ -265,7 +265,7 @@
               <div class="small">危険度 <span id="threat">低</span></div>
             </div>
             <div class="hpbar"><div class="hpfill" id="ehp"></div></div>
-            <div class="hpmeta"><span>HP</span><span id="ehpText">0 / 0</span></div>
+            <div class="hpmeta"><span>HP</span><span id="enemyHpText">0 / 0</span></div>
           </div>
           <div class="sprite"><div class="emoji">🐺</div></div>
         </div>
@@ -416,6 +416,7 @@
     ehp: $("ehp"),
     phpText: $("phpText"),
     ehpText: $("ehpText"),
+    enemyHpText: $("enemyHpText"),
     plv: $("plv"),
     patk: $("patk"),
     pdef: $("pdef"),
@@ -475,8 +476,8 @@
     const lv = Math.max(1, Math.floor(state.stage * 0.8 + state.wave * 0.6));
     const names = ["獣戦士","古道の盗賊","影狼","鉄牙の番人","瘴気の魔獣","骨の槍兵"];
     const name = pick(names);
-    const hp = Math.floor(55 + lv*18 + state.stage*10);
-    const atk = Math.floor(4 + lv*3.2 + state.stage*1.4);
+    const hp = Math.floor(5 + lv*18 + state.stage*10);
+    const atk = Math.floor(2 + lv*3.2 + state.stage*1.4);
     const def = Math.floor(0 + lv*1.1 + state.stage*0.7);
     const threat = (lv <= 6) ? "低" : (lv <= 14 ? "中" : "高");
     return { name, lv, maxHp: hp, hp, atk, def, threat };
@@ -757,7 +758,7 @@
     dom.elv.textContent = state.enemy.lv;
     dom.threat.textContent = state.enemy.threat;
 
-    dom.ehpText.textContent = `${Math.max(0,Math.floor(state.enemy.hp))} / ${Math.floor(state.enemy.maxHp)}`;
+    dom.enemyHpText.textContent = `${Math.max(0,Math.floor(state.enemy.hp))} / ${Math.floor(state.enemy.maxHp)}`;
     dom.ehp.style.width = `${clamp(state.enemy.hp / state.enemy.maxHp, 0, 1)*100}%`;
 
     // Derived readouts
