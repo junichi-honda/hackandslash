@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Idle Loot RPG MVP</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1b33;
+      --panel2:#122244;
+      --line:#223a66;
+      --text:#d7e3ff;
+      --muted:#92a7d6;
+      --good:#43e97b;
+      --warn:#ffb703;
+      --bad:#ff5d5d;
+      --rare:#7c5cff;
+      --epic:#ff4fd8;
+      --btn:#1a2f58;
+      --btn2:#21406f;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: radial-gradient(1200px 700px at 60% 20%, #1a2a52 0%, var(--bg) 45%, #070c16 100%);
+      color:var(--text);
+    }
+    .app{max-width:980px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+    .top{
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .battlebar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 12px;background: rgba(0,0,0,0.25);
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      gap:10px;flex-wrap:wrap;
+    }
+    .title{font-weight:700;letter-spacing:.3px}
+    .small{color:var(--muted);font-size:12px}
+    .pill{
+      font-size:12px;color:var(--text);
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      display:flex;gap:8px;align-items:center;
+    }
+    .pill b{font-size:12px}
+    .battle{
+      height:250px;
+      position:relative;
+      background:
+        radial-gradient(600px 250px at 55% 60%, rgba(67,233,123,0.08), rgba(0,0,0,0) 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0)),
+        linear-gradient(0deg, rgba(0,0,0,0.45), rgba(0,0,0,0));
+    }
+    .arena{
+      position:absolute;inset:0;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:22px 22px;
+    }
+    .char{
+      width:180px;height:180px;
+      display:flex;align-items:center;justify-content:center;
+      gap:14px;
+    }
+    .sprite{
+      width:84px;height:84px;border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+      border:1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 10px 35px rgba(0,0,0,0.35);
+      display:flex;align-items:center;justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .sprite::after{
+      content:"";
+      position:absolute;inset:-40px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%);
+      transform: rotate(18deg);
+    }
+    .sprite .emoji{
+      font-size:34px;filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35));
+      position:relative;z-index:1;
+    }
+    .nameplate{display:flex;flex-direction:column;gap:8px;width:100%}
+    .hpbar{height:10px;border-radius:999px;background: rgba(255,255,255,0.08);overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
+    .hpfill{height:100%;width:50%;background: linear-gradient(90deg, var(--bad), var(--warn));}
+    .hpmeta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+    .floaters{
+      position:absolute;inset:0;pointer-events:none;
+      overflow:hidden;
+    }
+    .floater{
+      position:absolute;
+      font-weight:700;
+      text-shadow:0 8px 18px rgba(0,0,0,0.55);
+      opacity:0;
+      transform: translateY(10px);
+      animation: pop 900ms ease-out forwards;
+    }
+    @keyframes pop{
+      0%{opacity:0;transform:translateY(10px) scale(.95)}
+      20%{opacity:1;transform:translateY(0) scale(1)}
+      100%{opacity:0;transform:translateY(-26px) scale(1)}
+    }
+    .bottom{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:12px;
+    }
+    @media (max-width:860px){
+      .bottom{grid-template-columns:1fr}
+    }
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .ph{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background: rgba(0,0,0,0.18);
+    }
+    .ph .h{font-weight:700}
+    .content{padding:12px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .slot{
+      background: rgba(0,0,0,0.25);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      padding:10px;
+      display:flex;gap:10px;align-items:center;
+    }
+    .ico{
+      width:38px;height:38px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.09);
+    }
+    .slot .meta{display:flex;flex-direction:column;gap:2px}
+    .slot .meta .k{font-size:12px;color:var(--muted)}
+    .slot .meta .v{font-size:13px}
+    .statline{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.08)}
+    .statline:last-child{border-bottom:none}
+    .btnrow{display:flex;flex-wrap:wrap;gap:8px}
+    button{
+      cursor:pointer;
+      background: linear-gradient(180deg, var(--btn2), var(--btn));
+      border:1px solid rgba(255,255,255,0.10);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    button:active{transform: translateY(1px)}
+    .toggle{
+      display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px;
+      user-select:none;
+    }
+    .toggle input{transform:scale(1.05)}
+    .invtop{
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    }
+    select, input[type="text"]{
+      background: rgba(0,0,0,0.25);
+      border:1px solid rgba(255,255,255,0.10);
+      color:var(--text);
+      border-radius:12px;
+      padding:9px 10px;
+      outline:none;
+    }
+    .inv{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    @media (max-width:520px){
+      .inv{grid-template-columns:1fr}
+    }
+    .item{
+      background: rgba(0,0,0,0.25);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:12px;
+      padding:10px;
+      display:flex;gap:10px;
+      position:relative;
+    }
+    .tag{
+      position:absolute;top:8px;right:8px;
+      font-size:11px;padding:4px 8px;border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      color:var(--muted);
+    }
+    .tag.new{color:#cfe8ff;border-color: rgba(207,232,255,0.25)}
+    .tag.rare{color:#e7dbff;border-color: rgba(124,92,255,0.35)}
+    .tag.epic{color:#ffe0fb;border-color: rgba(255,79,216,0.35)}
+    .rarity-common{border-color: rgba(255,255,255,0.10)}
+    .rarity-rare{border-color: rgba(124,92,255,0.50)}
+    .rarity-epic{border-color: rgba(255,79,216,0.50)}
+    .item .left{display:flex;flex-direction:column;gap:6px;min-width:42px}
+    .item .left .badge{
+      width:42px;height:42px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      font-size:18px;
+    }
+    .item .right{flex:1;display:flex;flex-direction:column;gap:6px}
+    .item .name{font-weight:800}
+    .item .sub{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+    .item .aff{font-size:12px;color:var(--text);display:flex;gap:10px;flex-wrap:wrap}
+    .item .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+    .item .actions button{padding:7px 10px;border-radius:10px;font-weight:800;font-size:12px}
+    .money{color:var(--warn);font-weight:800}
+    .footerbar{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      padding:10px 12px;border-top:1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.18);
+      color:var(--muted);font-size:12px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="battlebar">
+      <div>
+        <div class="title">古き街道 <span id="stageText">1-1</span></div>
+        <div class="small">放置で進行 / ドロップで装備更新</div>
+      </div>
+      <div class="pill"><span>⏱</span><b id="timeText">0.0s</b><span class="small">経過</span></div>
+      <div class="pill"><span>💰</span><b class="money" id="goldText">0</b><span class="small">Gold</span></div>
+      <div class="pill"><span>⚔️</span><b id="dpsText">0</b><span class="small">DPS</span></div>
+      <div class="pill"><span>🛡️</span><b id="ehpText">0</b><span class="small">EHP</span></div>
+    </div>
+
+    <div class="battle">
+      <div class="arena">
+        <div class="char">
+          <div class="sprite"><div class="emoji">🧙</div></div>
+          <div class="nameplate">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><b>プレイヤー</b> <span class="small">Lv <span id="plv">1</span></span></div>
+              <div class="small">ATK <span id="patk">0</span> / DEF <span id="pdef">0</span></div>
+            </div>
+            <div class="hpbar"><div class="hpfill" id="php"></div></div>
+            <div class="hpmeta"><span>HP</span><span id="phpText">0 / 0</span></div>
+          </div>
+        </div>
+
+        <div class="char" style="justify-content:flex-end;">
+          <div class="nameplate">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><b id="ename">獣戦士</b> <span class="small">Lv <span id="elv">1</span></span></div>
+              <div class="small">危険度 <span id="threat">低</span></div>
+            </div>
+            <div class="hpbar"><div class="hpfill" id="ehp"></div></div>
+            <div class="hpmeta"><span>HP</span><span id="ehpText">0 / 0</span></div>
+          </div>
+          <div class="sprite"><div class="emoji">🐺</div></div>
+        </div>
+      </div>
+      <div class="floaters" id="floaters"></div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="panel">
+      <div class="ph">
+        <div class="h">装備</div>
+        <div class="small">クリックで解除</div>
+      </div>
+      <div class="content">
+        <div class="grid2" id="equipGrid"></div>
+
+        <div style="height:10px"></div>
+        <div class="ph" style="border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+          <div class="h">ステータス</div>
+          <div class="small">基礎 + 装備補正</div>
+        </div>
+        <div class="content" style="padding:10px 12px">
+          <div class="statline"><span>攻撃力 (ATK)</span><b id="statAtk">0</b></div>
+          <div class="statline"><span>防御力 (DEF)</span><b id="statDef">0</b></div>
+          <div class="statline"><span>最大HP</span><b id="statHp">0</b></div>
+          <div class="statline"><span>回避率</span><b id="statEva">0%</b></div>
+          <div class="statline"><span>クリ率</span><b id="statCrit">0%</b></div>
+          <div class="statline"><span>攻撃速度</span><b id="statAspd">0.0/s</b></div>
+        </div>
+
+        <div class="ph" style="border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+          <div class="h">操作</div>
+          <div class="small">MVP</div>
+        </div>
+        <div class="content">
+          <div class="btnrow">
+            <button id="btnStart">▶ 開始</button>
+            <button id="btnPause">⏸ 停止</button>
+            <button id="btnFast">⏩ x2</button>
+            <button id="btnReset">🧹 リセット</button>
+          </div>
+          <div style="height:10px"></div>
+          <label class="toggle"><input type="checkbox" id="autoSellCommon" /> Commonを自動売却</label>
+          <label class="toggle"><input type="checkbox" id="autoEquipBetter" checked /> より強い装備は自動装備</label>
+        </div>
+      </div>
+
+      <div class="footerbar">
+        <span>Tips: Rare以上は残して更新。Commonは売却でGold回収。</span>
+        <span>所持: <b id="invCount">0</b> / 60</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">
+        <div class="h">インベントリ</div>
+        <div class="invtop">
+          <select id="filterRarity">
+            <option value="all">全て</option>
+            <option value="common">Common</option>
+            <option value="rare">Rare</option>
+            <option value="epic">Epic</option>
+          </select>
+          <select id="filterSlot">
+            <option value="all">全スロット</option>
+            <option value="weapon">武器</option>
+            <option value="shield">盾</option>
+            <option value="armor">鎧</option>
+            <option value="ring">指輪</option>
+            <option value="boots">靴</option>
+          </select>
+          <input id="search" type="text" placeholder="検索（例: DEF）" />
+          <button id="btnSellAllCommon">Commonを全売却</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="small">ドロップ: <b id="lastDrop">-</b></div>
+        <div class="inv" id="inv"></div>
+      </div>
+
+      <div class="footerbar">
+        <span>フィルタ適用中の表示のみ。装備で自動戦闘が加速します。</span>
+        <span>Wave: <b id="waveText">1</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- Utilities ----------
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[(Math.random() * arr.length) | 0];
+  const fmt = (n) => Math.floor(n).toLocaleString("ja-JP");
+  const pct = (x) => (Math.round(x * 1000) / 10).toFixed(1) + "%";
+
+  // ---------- Game Config ----------
+  const MAX_INV = 60;
+  const TICK_BASE = 0.12; // seconds per tick (before speed)
+  const RARITIES = {
+    common: { name: "Common", weight: 78, colorClass: "rarity-common", tag: "New" },
+    rare:   { name: "Rare",   weight: 18, colorClass: "rarity-rare",   tag: "Rare" },
+    epic:   { name: "Epic",   weight: 4,  colorClass: "rarity-epic",   tag: "Pow" }
+  };
+  const SLOT_META = {
+    weapon: { label:"武器", icon:"⚔️" },
+    shield: { label:"盾", icon:"🛡️" },
+    armor:  { label:"鎧", icon:"🥋" },
+    ring:   { label:"指輪", icon:"💍" },
+    boots:  { label:"靴", icon:"👢" },
+  };
+
+  // ---------- State ----------
+  const state = {
+    running: false,
+    speed: 1,
+    t: 0,
+    stage: 1,
+    wave: 1,
+    gold: 0,
+    player: {
+      lv: 1,
+      base: { atk: 4, def: 1, hp: 60, eva: 0.02, crit: 0.05, aspd: 1.1 }, // aspd = attacks/sec
+      hp: 60,
+      equip: { weapon:null, shield:null, armor:null, ring:null, boots:null },
+    },
+    enemy: null,
+    inv: [],
+    lastDrop: "-",
+    flags: { autoSellCommon:false, autoEquipBetter:true },
+  };
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const dom = {
+    stageText: $("stageText"),
+    timeText: $("timeText"),
+    goldText: $("goldText"),
+    dpsText: $("dpsText"),
+    ehpText: $("ehpText"),
+    ename: $("ename"),
+    elv: $("elv"),
+    threat: $("threat"),
+    php: $("php"),
+    ehp: $("ehp"),
+    phpText: $("phpText"),
+    ehpText: $("ehpText"),
+    plv: $("plv"),
+    patk: $("patk"),
+    pdef: $("pdef"),
+    waveText: $("waveText"),
+    inv: $("inv"),
+    invCount: $("invCount"),
+    lastDrop: $("lastDrop"),
+    equipGrid: $("equipGrid"),
+    floaters: $("floaters"),
+    statAtk: $("statAtk"),
+    statDef: $("statDef"),
+    statHp: $("statHp"),
+    statEva: $("statEva"),
+    statCrit: $("statCrit"),
+    statAspd: $("statAspd"),
+    filterRarity: $("filterRarity"),
+    filterSlot: $("filterSlot"),
+    search: $("search"),
+    autoSellCommon: $("autoSellCommon"),
+    autoEquipBetter: $("autoEquipBetter"),
+    btnStart: $("btnStart"),
+    btnPause: $("btnPause"),
+    btnFast: $("btnFast"),
+    btnReset: $("btnReset"),
+    btnSellAllCommon: $("btnSellAllCommon"),
+  };
+
+  // ---------- Core Calculations ----------
+  function calcStats(){
+    const p = state.player;
+    const s = { ...p.base };
+    for (const k of Object.keys(p.equip)){
+      const it = p.equip[k];
+      if (!it) continue;
+      s.atk += it.stats.atk || 0;
+      s.def += it.stats.def || 0;
+      s.hp  += it.stats.hp  || 0;
+      s.eva += it.stats.eva || 0;
+      s.crit+= it.stats.crit|| 0;
+      s.aspd+= it.stats.aspd|| 0;
+    }
+    // bounds
+    s.eva  = clamp(s.eva, 0, 0.45);
+    s.crit = clamp(s.crit,0, 0.60);
+    s.aspd = clamp(s.aspd,0.3, 6.0);
+    return s;
+  }
+
+  function effectiveHP(stats){
+    // Simple EHP: HP / (1 - mitigation) with mitigation = def/(def+50)
+    const mit = stats.def / (stats.def + 50);
+    return stats.hp / (1 - mit);
+  }
+
+  // ---------- Enemy ----------
+  function makeEnemy(){
+    const lv = Math.max(1, Math.floor(state.stage * 0.8 + state.wave * 0.6));
+    const names = ["獣戦士","古道の盗賊","影狼","鉄牙の番人","瘴気の魔獣","骨の槍兵"];
+    const name = pick(names);
+    const hp = Math.floor(55 + lv*18 + state.stage*10);
+    const atk = Math.floor(4 + lv*3.2 + state.stage*1.4);
+    const def = Math.floor(0 + lv*1.1 + state.stage*0.7);
+    const threat = (lv <= 6) ? "低" : (lv <= 14 ? "中" : "高");
+    return { name, lv, maxHp: hp, hp, atk, def, threat };
+  }
+
+  function nextEnemy(){
+    state.enemy = makeEnemy();
+  }
+
+  // ---------- Loot ----------
+  function rollRarity(){
+    const total = Object.values(RARITIES).reduce((a,r)=>a+r.weight,0);
+    let x = Math.random() * total;
+    for (const [k, r] of Object.entries(RARITIES)){
+      x -= r.weight;
+      if (x <= 0) return k;
+    }
+    return "common";
+  }
+
+  function genItem(){
+    const slot = pick(Object.keys(SLOT_META));
+    const rarity = rollRarity();
+    const lv = Math.max(1, Math.floor(state.stage * 0.9 + state.wave * 0.7));
+    const budgetBase = 6 + lv*2.2;
+    const mult = rarity === "common" ? 1 : (rarity === "rare" ? 1.6 : 2.25);
+    const budget = budgetBase * mult;
+
+    const stats = {};
+    const pools = {
+      weapon: ["atk","crit","aspd"],
+      shield: ["def","hp","eva"],
+      armor:  ["def","hp"],
+      ring:   ["crit","eva","atk"],
+      boots:  ["eva","aspd","hp"]
+    };
+    const keys = pools[slot];
+
+    // allocate 2-3 stats
+    const n = rarity === "epic" ? 3 : (Math.random()<0.65 ? 2 : 3);
+    const chosen = [];
+    while (chosen.length < n){
+      const k = pick(keys);
+      if (!chosen.includes(k)) chosen.push(k);
+    }
+
+    let remain = budget;
+    for (let i=0;i<chosen.length;i++){
+      const k = chosen[i];
+      const share = (i === chosen.length-1) ? remain : rnd(remain*0.25, remain*0.55);
+      remain -= share;
+
+      if (k === "atk")  stats.atk  = (stats.atk||0)  + Math.max(1, Math.floor(share));
+      if (k === "def")  stats.def  = (stats.def||0)  + Math.max(1, Math.floor(share*0.8));
+      if (k === "hp")   stats.hp   = (stats.hp||0)   + Math.max(4, Math.floor(share*3.5));
+      if (k === "eva")  stats.eva  = (stats.eva||0)  + Math.max(0.005, share/400);
+      if (k === "crit") stats.crit = (stats.crit||0) + Math.max(0.006, share/380);
+      if (k === "aspd") stats.aspd = (stats.aspd||0) + Math.max(0.05, share/120);
+    }
+
+    const price = Math.floor((8 + lv*4) * (rarity==="common"?1:rarity==="rare"?2.2:4.2));
+    const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + String(Math.random());
+
+    const name = (() => {
+      const pre = rarity==="common" ? "木製" : (rarity==="rare" ? "鍛造" : "神秘");
+      const mid = slot==="weapon" ? "の剣" : slot==="shield" ? "の盾" : slot==="armor" ? "の鎧" : slot==="ring" ? "の指輪" : "の靴";
+      return `${pre}${mid}`;
+    })();
+
+    return {
+      id, slot, rarity, lv, name, stats, price, isNew:true,
+      createdAt: performance.now()
+    };
+  }
+
+  function itemScore(it){
+    // rough heuristic to compare items across same slot
+    const s = it.stats;
+    return (s.atk||0)*2.4 + (s.def||0)*1.8 + (s.hp||0)*0.08 + (s.eva||0)*120 + (s.crit||0)*130 + (s.aspd||0)*35 + it.lv*0.6;
+  }
+
+  function tryAutoEquip(it){
+    if (!state.flags.autoEquipBetter) return false;
+    const cur = state.player.equip[it.slot];
+    if (!cur) { equipItem(it.id); return true; }
+    if (itemScore(it) > itemScore(cur) * 1.03) { // 3% better
+      equipItem(it.id);
+      return true;
+    }
+    return false;
+  }
+
+  function addToInv(it){
+    if (state.inv.length >= MAX_INV){
+      // if full, sell the worst common automatically
+      const commons = state.inv.filter(x=>x.rarity==="common");
+      if (commons.length){
+        commons.sort((a,b)=>itemScore(a)-itemScore(b));
+        sellItem(commons[0].id, true);
+      } else {
+        // no commons to sell: sell this drop
+        state.gold += it.price;
+        state.lastDrop = `${it.name} (満杯で売却)`;
+        return;
+      }
+    }
+
+    if (state.flags.autoSellCommon && it.rarity==="common"){
+      state.gold += it.price;
+      state.lastDrop = `${it.name} (自動売却)`;
+      return;
+    }
+
+    state.inv.unshift(it);
+    state.lastDrop = `${it.name} / ${RARITIES[it.rarity].name} / Lv${it.lv}`;
+    tryAutoEquip(it);
+  }
+
+  // ---------- Combat Loop ----------
+  function spawnFloater(text, xPct, yPct, good=false){
+    const el = document.createElement("div");
+    el.className = "floater";
+    el.textContent = text;
+    el.style.left = xPct + "%";
+    el.style.top = yPct + "%";
+    el.style.color = good ? "var(--good)" : "var(--bad)";
+    dom.floaters.appendChild(el);
+    setTimeout(()=>el.remove(), 950);
+  }
+
+  function step(dt){
+    const p = state.player;
+    const e = state.enemy;
+    const st = calcStats();
+
+    // Player attacks
+    const pAttacks = st.aspd * dt;
+    // Convert to expected damage per dt with crit
+    const critMul = 1 + st.crit * 0.75;
+    const raw = st.atk * pAttacks * critMul;
+
+    const eMit = e.def / (e.def + 45);
+    const pDmg = raw * (1 - eMit);
+
+    e.hp -= pDmg;
+    if (Math.random() < 0.12) spawnFloater(`-${Math.max(1,Math.floor(pDmg))}`, 70, 38, true);
+
+    // Enemy attacks
+    // Basic evasion
+    if (Math.random() > st.eva){
+      const eAttacks = 0.9 * dt;
+      const eRaw = e.atk * eAttacks;
+      const pMit = st.def / (st.def + 55);
+      const eDmg = eRaw * (1 - pMit);
+      p.hp -= eDmg;
+      if (Math.random() < 0.10) spawnFloater(`-${Math.max(1,Math.floor(eDmg))}`, 30, 44, false);
+    } else {
+      if (Math.random() < 0.08) spawnFloater("MISS", 28, 42, true);
+    }
+
+    // Clamp HP
+    const maxHp = st.hp;
+    p.hp = clamp(p.hp, 0, maxHp);
+
+    // Death checks
+    if (e.hp <= 0){
+      // reward
+      const baseGold = 8 + e.lv*5 + state.stage*4;
+      state.gold += Math.floor(baseGold * rnd(0.9, 1.15));
+      // drop chance
+      const dropChance = clamp(0.38 + state.stage*0.01, 0.40, 0.78);
+      if (Math.random() < dropChance) addToInv(genItem());
+
+      state.wave += 1;
+      if (state.wave % 5 === 0){
+        state.stage += 1; // stage up every 5 waves (MVP)
+        state.player.lv = Math.max(state.player.lv, 1 + Math.floor(state.stage/2));
+        // small base growth
+        state.player.base.atk += 1;
+        state.player.base.def += (state.stage % 2 === 0) ? 1 : 0;
+        state.player.base.hp  += 6;
+        // heal on stage up
+        p.hp = calcStats().hp;
+      }
+      nextEnemy();
+    }
+
+    if (p.hp <= 0){
+      // soft reset: lose some gold, revive
+      const loss = Math.floor(state.gold * 0.08);
+      state.gold -= loss;
+      p.hp = calcStats().hp;
+      state.wave = Math.max(1, state.wave - 2);
+      nextEnemy();
+      spawnFloater(`-${fmt(loss)}G`, 40, 58, false);
+    }
+
+    // Render derived
+    renderHUD(st);
+  }
+
+  // ---------- Inventory actions ----------
+  function equipItem(id){
+    const idx = state.inv.findIndex(x=>x.id===id);
+    if (idx < 0) return;
+    const it = state.inv[idx];
+    const slot = it.slot;
+
+    // move current equip back to inv
+    const cur = state.player.equip[slot];
+    if (cur) {
+      cur.isNew = false;
+      state.inv.push(cur);
+    }
+
+    // equip
+    state.player.equip[slot] = it;
+    state.inv.splice(idx,1);
+    it.isNew = false;
+
+    // heal to new max
+    const st = calcStats();
+    state.player.hp = clamp(state.player.hp + Math.floor(st.hp*0.15), 0, st.hp);
+
+    renderAll();
+  }
+
+  function unequip(slot){
+    const cur = state.player.equip[slot];
+    if (!cur) return;
+    if (state.inv.length >= MAX_INV) return; // ignore if full
+    state.player.equip[slot] = null;
+    cur.isNew = false;
+    state.inv.unshift(cur);
+    renderAll();
+  }
+
+  function sellItem(id, silent=false){
+    const idx = state.inv.findIndex(x=>x.id===id);
+    if (idx < 0) return;
+    const it = state.inv[idx];
+    state.gold += it.price;
+    state.inv.splice(idx,1);
+    if (!silent) spawnFloater(`+${fmt(it.price)}G`, 52, 62, true);
+    renderAll();
+  }
+
+  function sellAllCommon(){
+    const before = state.inv.length;
+    let gained = 0;
+    state.inv = state.inv.filter(it => {
+      if (it.rarity === "common"){
+        gained += it.price;
+        return false;
+      }
+      return true;
+    });
+    state.gold += gained;
+    spawnFloater(`+${fmt(gained)}G`, 55, 62, true);
+    if (before !== state.inv.length) renderAll();
+  }
+
+  // ---------- Rendering ----------
+  function renderHUD(st){
+    dom.stageText.textContent = `${state.stage}-${((state.wave-1)%5)+1}`;
+    dom.timeText.textContent = `${state.t.toFixed(1)}s`;
+    dom.goldText.textContent = fmt(state.gold);
+
+    dom.plv.textContent = state.player.lv;
+    dom.patk.textContent = Math.floor(st.atk);
+    dom.pdef.textContent = Math.floor(st.def);
+
+    const maxHp = st.hp;
+    dom.phpText.textContent = `${Math.floor(state.player.hp)} / ${Math.floor(maxHp)}`;
+    dom.php.style.width = `${(state.player.hp / maxHp)*100}%`;
+
+    dom.ename.textContent = state.enemy.name;
+    dom.elv.textContent = state.enemy.lv;
+    dom.threat.textContent = state.enemy.threat;
+
+    dom.ehpText.textContent = `${Math.max(0,Math.floor(state.enemy.hp))} / ${Math.floor(state.enemy.maxHp)}`;
+    dom.ehp.style.width = `${clamp(state.enemy.hp / state.enemy.maxHp, 0, 1)*100}%`;
+
+    // Derived readouts
+    const dps = st.atk * st.aspd * (1 + st.crit * 0.75);
+    dom.dpsText.textContent = Math.floor(dps);
+    dom.ehpText.textContent = Math.floor(effectiveHP(st));
+    dom.waveText.textContent = state.wave;
+
+    dom.statAtk.textContent = Math.floor(st.atk);
+    dom.statDef.textContent = Math.floor(st.def);
+    dom.statHp.textContent = Math.floor(st.hp);
+    dom.statEva.textContent = pct(st.eva);
+    dom.statCrit.textContent = pct(st.crit);
+    dom.statAspd.textContent = st.aspd.toFixed(1) + "/s";
+
+    dom.invCount.textContent = state.inv.length;
+    dom.lastDrop.textContent = state.lastDrop;
+  }
+
+  function renderEquip(){
+    dom.equipGrid.innerHTML = "";
+    for (const slot of Object.keys(SLOT_META)){
+      const meta = SLOT_META[slot];
+      const it = state.player.equip[slot];
+      const el = document.createElement("div");
+      el.className = "slot";
+      el.title = "クリックで解除";
+      el.addEventListener("click", () => unequip(slot));
+      el.innerHTML = `
+        <div class="ico">${meta.icon}</div>
+        <div class="meta">
+          <div class="k">${meta.label}</div>
+          <div class="v">${it ? `<b>${it.name}</b> <span class="small">(${RARITIES[it.rarity].name})</span>` : `<span class="small">未装備</span>`}</div>
+          <div class="small">${it ? itemAffText(it) : ""}</div>
+        </div>
+      `;
+      dom.equipGrid.appendChild(el);
+    }
+  }
+
+  function itemAffText(it){
+    const s = it.stats;
+    const parts = [];
+    if (s.atk)  parts.push(`ATK +${Math.floor(s.atk)}`);
+    if (s.def)  parts.push(`DEF +${Math.floor(s.def)}`);
+    if (s.hp)   parts.push(`HP +${Math.floor(s.hp)}`);
+    if (s.eva)  parts.push(`回避 +${pct(s.eva)}`);
+    if (s.crit) parts.push(`クリ +${pct(s.crit)}`);
+    if (s.aspd) parts.push(`速度 +${s.aspd.toFixed(1)}/s`);
+    return parts.join(" / ");
+  }
+
+  function renderInv(){
+    const fr = dom.filterRarity.value;
+    const fs = dom.filterSlot.value;
+    const q = dom.search.value.trim().toLowerCase();
+
+    const list = state.inv.filter(it => {
+      if (fr !== "all" && it.rarity !== fr) return false;
+      if (fs !== "all" && it.slot !== fs) return false;
+      if (q){
+        const hay = (it.name + " " + itemAffText(it)).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    dom.inv.innerHTML = "";
+    for (const it of list){
+      const div = document.createElement("div");
+      div.className = `item ${RARITIES[it.rarity].colorClass} rarity-${it.rarity}`;
+      const badge = SLOT_META[it.slot].icon;
+
+      const tagClass = it.rarity === "common" ? "new" : (it.rarity === "rare" ? "rare" : "epic");
+      const tagText  = it.isNew ? (it.rarity==="common" ? "New" : (it.rarity==="rare" ? "Rare" : "Pow")) : RARITIES[it.rarity].name;
+
+      div.innerHTML = `
+        <div class="tag ${tagClass}">${tagText}</div>
+        <div class="left">
+          <div class="badge">${badge}</div>
+        </div>
+        <div class="right">
+          <div class="name">${it.name} <span class="small">Lv${it.lv}</span></div>
+          <div class="sub">
+            <span>${SLOT_META[it.slot].label}</span>
+            <span>${RARITIES[it.rarity].name}</span>
+            <span class="money">${fmt(it.price)}G</span>
+          </div>
+          <div class="aff">${itemAffText(it)}</div>
+          <div class="actions">
+            <button data-equip="${it.id}">装備</button>
+            <button data-sell="${it.id}">売却</button>
+          </div>
+        </div>
+      `;
+      dom.inv.appendChild(div);
+    }
+
+    // bind buttons
+    dom.inv.querySelectorAll("button[data-equip]").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{ e.stopPropagation(); equipItem(btn.dataset.equip); });
+    });
+    dom.inv.querySelectorAll("button[data-sell]").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{ e.stopPropagation(); sellItem(btn.dataset.sell); });
+    });
+  }
+
+  function renderAll(){
+    const st = calcStats();
+    renderEquip();
+    renderInv();
+    renderHUD(st);
+  }
+
+  // ---------- Loop control ----------
+  let acc = 0;
+  let last = performance.now();
+
+  function loop(now){
+    const dtReal = (now - last) / 1000;
+    last = now;
+
+    if (state.running){
+      state.t += dtReal * state.speed;
+      acc += dtReal * state.speed;
+
+      const tick = TICK_BASE;
+      while (acc >= tick){
+        acc -= tick;
+        step(tick);
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- UI Events ----------
+  dom.btnStart.addEventListener("click", ()=>{ state.running = true; });
+  dom.btnPause.addEventListener("click", ()=>{ state.running = false; });
+  dom.btnFast.addEventListener("click", ()=>{
+    state.speed = (state.speed === 1) ? 2 : (state.speed === 2 ? 4 : 1);
+    dom.btnFast.textContent = state.speed === 1 ? "⏩ x2" : (state.speed === 2 ? "⏩ x4" : "⏩ x1");
+  });
+  dom.btnReset.addEventListener("click", ()=>{
+    localStorage.removeItem("idle_loot_mvp_v1");
+    location.reload();
+  });
+
+  dom.autoSellCommon.addEventListener("change", ()=>{ state.flags.autoSellCommon = dom.autoSellCommon.checked; save(); });
+  dom.autoEquipBetter.addEventListener("change", ()=>{ state.flags.autoEquipBetter = dom.autoEquipBetter.checked; save(); });
+
+  dom.filterRarity.addEventListener("change", renderInv);
+  dom.filterSlot.addEventListener("change", renderInv);
+  dom.search.addEventListener("input", renderInv);
+  dom.btnSellAllCommon.addEventListener("click", sellAllCommon);
+
+  // ---------- Save/Load ----------
+  function save(){
+    const payload = {
+      running:false, speed:1, t:state.t, stage:state.stage, wave:state.wave, gold:state.gold,
+      player:{
+        lv:state.player.lv,
+        base:state.player.base,
+        hp:state.player.hp,
+        equip:state.player.equip,
+      },
+      inv:state.inv,
+      flags:state.flags,
+      lastDrop:state.lastDrop,
+      enemy:state.enemy
+    };
+    try{ localStorage.setItem("idle_loot_mvp_v1", JSON.stringify(payload)); }catch{}
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem("idle_loot_mvp_v1");
+      if (!raw) return false;
+      const p = JSON.parse(raw);
+      state.t = p.t ?? 0;
+      state.stage = p.stage ?? 1;
+      state.wave = p.wave ?? 1;
+      state.gold = p.gold ?? 0;
+      state.player.lv = p.player?.lv ?? 1;
+      state.player.base = p.player?.base ?? state.player.base;
+      state.player.hp = p.player?.hp ?? calcStats().hp;
+      state.player.equip = p.player?.equip ?? state.player.equip;
+      state.inv = Array.isArray(p.inv) ? p.inv : [];
+      state.flags = p.flags ?? state.flags;
+      state.lastDrop = p.lastDrop ?? "-";
+      state.enemy = p.enemy ?? makeEnemy();
+
+      dom.autoSellCommon.checked = !!state.flags.autoSellCommon;
+      dom.autoEquipBetter.checked = !!state.flags.autoEquipBetter;
+      return true;
+    }catch{
+      return false;
+    }
+  }
+
+  // autosave interval
+  setInterval(save, 1500);
+
+  // ---------- Init ----------
+  if (!load()){
+    nextEnemy();
+    state.player.hp = calcStats().hp;
+  }
+  renderAll();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
