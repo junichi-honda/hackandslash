@@ -389,7 +389,7 @@
   </style>
 </head>
 <body>
-<div class="version">v0.8.4</div>
+<div class="version">v0.8.5</div>
 
 <!-- Tutorial Popup -->
 <div class="popup-overlay" id="tutorialPopup">
@@ -1177,11 +1177,11 @@
     dom.pexpText.textContent = `${state.player.exp} / ${state.player.expToNext}`;
     dom.pexp.style.width = `${expPct}%`;
 
-    dom.ename.textContent = state.enemy.name;
-    dom.ename.style.color = state.enemy.isBoss ? "#ffd700" : "";
-    dom.ename.style.textShadow = state.enemy.isBoss ? "0 0 10px #ffd700" : "";
-    dom.elv.textContent = state.enemy.lv;
-    dom.enemySprite.querySelector(".emoji").textContent = state.enemy.icon;
+    dom.ename.textContent = state.enemy?.name ?? "???";
+    dom.ename.style.color = state.enemy?.isBoss ? "#ffd700" : "";
+    dom.ename.style.textShadow = state.enemy?.isBoss ? "0 0 10px #ffd700" : "";
+    dom.elv.textContent = state.enemy?.lv ?? 1;
+    dom.enemySprite.querySelector(".emoji").textContent = state.enemy?.icon ?? "🐺";
     dom.eatk.textContent = state.enemy.atk;
     dom.edef.textContent = state.enemy.def;
 
@@ -1406,6 +1406,10 @@
       state.flags = p.flags ?? state.flags;
       state.lastDrop = p.lastDrop ?? "-";
       state.enemy = p.enemy ?? makeEnemy();
+      // 古いセーブデータにiconがない場合のフォールバック
+      if (state.enemy && !state.enemy.icon) {
+        state.enemy.icon = "🐺";
+      }
       state.playerAtkTimer = p.playerAtkTimer ?? 0;
       state.enemyAtkTimer = p.enemyAtkTimer ?? (1 / ENEMY_ASPD);
 
